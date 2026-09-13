@@ -3,6 +3,7 @@ from django.urls import path
 
 from dermatology import api_views, views
 from maxillo.views import export as maxillo_export
+from annotations import views as annotations_views
 
 
 app_name = "dermatology"
@@ -62,6 +63,17 @@ urlpatterns = [
     path("api/annotations/<int:annotation_id>/", views.region_annotation_detail, name="region_annotation_detail"),
     path("api/region-types/", views.region_types, name="region_types"),
     path("api/region-types/<int:pk>/", views.region_type_detail, name="region_type_detail"),
+
+    path(
+        "api/patients/<int:patient_id>/dermatology-annotations/",
+        annotations_views.save_dermatology_annotations_api,
+        name="api_save_dermatology_annotations",
+    ),
+    path(
+        "api/patients/<int:patient_id>/dermatology-annotations/state/",
+        annotations_views.dermatology_annotations_state_api,
+        name="api_dermatology_annotations_state",
+    ),
 
     # Generic file/processing API
     path("api/processing/health/", api_views.health_check, name="api_health_check"),

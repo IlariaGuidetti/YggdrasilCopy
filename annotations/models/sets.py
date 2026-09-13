@@ -94,6 +94,13 @@ class AnnotationSet(DomainFKAccessorMixin, models.Model):
         blank=True,
         related_name="annotation_sets",
     )
+    dermatology_patient = models.ForeignKey(
+        "dermatology.Patient",
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="annotation_sets",
+    )
 
     annotation_method = models.ForeignKey(
         "common.AnnotationMethod",
@@ -147,6 +154,7 @@ class AnnotationSet(DomainFKAccessorMixin, models.Model):
             models.Index(fields=["patient", "kind"]),
             models.Index(fields=["brain_patient", "kind"]),
             models.Index(fields=["laparoscopy_patient", "kind"]),
+            models.Index(fields=["dermatology_patient", "kind"]),
             # The raw-data lock's query: "does this patient have annotation work?"
             models.Index(fields=["domain", "ever_annotated"]),
         ]

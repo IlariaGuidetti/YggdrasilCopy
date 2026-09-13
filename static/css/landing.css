@@ -250,7 +250,11 @@ main.landing {
     --grad: var(--ygg-laparoscopy-grad);
     --soft: var(--ygg-danger-soft);
 }
-
+.domain--dermatology {
+    --accent: var(--ygg-dermatology);
+    --grad: var(--ygg-dermatology-grad);
+    --soft: var(--ygg-accent-soft);
+}
 .domain__bar {
     position: absolute;
     top: 0;

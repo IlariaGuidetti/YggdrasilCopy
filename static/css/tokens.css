@@ -70,6 +70,8 @@
     --ygg-brain-grad: linear-gradient(135deg, #0e7c66, #35c3a6);
     --ygg-laparoscopy: #e0785f;
     --ygg-laparoscopy-grad: linear-gradient(135deg, #c85a42, #f09a80);
+    --ygg-dermatology: #d0648b;
+    --ygg-dermatology-grad: linear-gradient(135deg, #b8456f, #ffb199);
 
     /* ---- Semantic aliases (what components consume) ----
      * Kit rule: blue leads, green = life/success, gold = runic wordmark only. */
@@ -156,6 +158,7 @@
     --ygg-maxillo: #7aa5ff;
     --ygg-brain: #35c3a6;
     --ygg-laparoscopy: #f09a80;
+    --ygg-dermatology: #ff9fc4;
 
     /* Soft chip backgrounds on dark */
     --ygg-accent-soft: #16233c;

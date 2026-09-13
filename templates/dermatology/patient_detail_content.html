@@ -5,36 +5,94 @@
 
         <div class="col-lg-8">
 
-            <div class="d-flex justify-content-between align-items-center mb-3">
+            <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
                 <h4 class="mb-0">
                     <i class="fas fa-user-md me-2"></i>
                     {% if patient.name %}{{ patient.name }}{% else %}Patient {{ patient.patient_id }}{% endif %}
                 </h4>
+                <button id="annotation-toggle-btn" class="btn btn-sm btn-outline-warning d-none">
+                    <i class="fas fa-draw-polygon me-1"></i>Enter Annotation Mode
+                </button>
             </div>
 
-            <div id="clinicalPhotoLoading">
-                <div class="text-center py-4">
-                    <div class="spinner-border text-primary" role="status">
-                        <span class="visually-hidden">Loading...</span>
+            <div id="annotation-toolbar" class="d-none mb-2">
+                <div class="card">
+                    <div class="card-body py-2 px-3 d-flex flex-wrap align-items-center gap-3">
+                        <div class="btn-group btn-group-sm" role="group">
+                            <button type="button" class="btn btn-outline-primary active" data-tool="brush" title="Brush">
+                                <i class="fas fa-paint-brush"></i>
+                            </button>
+                            <button type="button" class="btn btn-outline-primary" data-tool="eraser" title="Eraser">
+                                <i class="fas fa-eraser"></i>
+                            </button>
+                            <button type="button" class="btn btn-outline-primary" data-tool="polygon"
+                                    title="Polygon — click to add vertices, double-click or Enter to close, Esc to cancel">
+                                <i class="fas fa-draw-polygon"></i>
+                            </button>
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            <label class="small mb-0 text-nowrap"><i class="fas fa-circle me-1"></i>Size</label>
+                            <input id="brush-size-input" type="range" class="form-range" min="1" max="60" value="8" style="width:90px;">
+                            <span id="brush-size-label" class="small text-muted" style="min-width:20px;">8</span>
+                        </div>
+                        <div class="d-flex align-items-center gap-2 ms-auto">
+                            <label class="small mb-0 text-nowrap">Body region</label>
+                            <select id="quadrant-select" class="form-select form-select-sm" style="max-width:160px;"></select>
+                            {% if is_admin_user %}
+                            <button id="add-quadrant-btn" class="btn btn-sm btn-outline-secondary" type="button" title="Add body region">
+                                <i class="fas fa-plus"></i>
+                            </button>
+                            <button id="delete-quadrant-btn" class="btn btn-sm btn-outline-danger" type="button" title="Delete selected body region">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                            {% endif %}
+                        </div>
                     </div>
-                    <p class="mt-2 text-muted">Loading clinical photo...</p>
                 </div>
             </div>
-            <div id="clinicalPhotoContent" class="mb-3" style="display:none;background:#111;line-height:0;overflow:hidden;text-align:center;border-radius:6px;">
-                <img id="clinicalPhotoImage" style="max-width:100%;max-height:65vh;display:inline-block;cursor:pointer;" alt="Clinical photo">
-            </div>
-            <div id="clinicalPhotoError" style="display:none;">
-                <p class="text-muted p-4 mb-0 text-center">
-                    <i class="fas fa-camera me-2"></i>No clinical photo uploaded for this patient yet.
+
+            <div id="photo-player-wrap" class="mb-2" style="background:#000;line-height:0;overflow:hidden;position:relative;display:flex;justify-content:center;">
+                <p class="text-muted p-3 mb-0" id="photo-placeholder" style="line-height:normal;">
+                    <i class="fas fa-hourglass-half me-2"></i>Loading clinical photo...
                 </p>
+            </div>
+            <div id="polygon-drawing-hint" class="d-none small text-info mb-2">
+                <i class="fas fa-draw-polygon me-1"></i>
+                Click to add points &nbsp;&middot;&nbsp; Double-click or <kbd>Enter</kbd> to close &nbsp;&middot;&nbsp; <kbd>Esc</kbd> to cancel
             </div>
 
         </div>
 
         <div class="col-lg-4">
+
             {% include 'common/sections/vocal_caption_section.html' %}
             {% include 'common/sections/scan_settings_section.html' %}
             {% include 'common/sections/file_management_section.html' %}
+
+            <div id="region-types-panel" class="mb-3">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center py-2">
+                        <strong class="small"><i class="fas fa-layer-group me-1"></i>Region Types</strong>
+                        {% if is_admin_user %}
+                        <button id="add-region-btn" class="btn btn-sm btn-outline-success py-0">
+                            <i class="fas fa-plus me-1"></i>Add
+                        </button>
+                        {% endif %}
+                    </div>
+                    <ul id="region-list" class="list-unstyled d-flex flex-wrap gap-2 mb-0 p-2"
+                        style="max-height:220px;overflow-y:auto;"></ul>
+                </div>
+            </div>
+
+            <div id="shapes-list-panel" class="mb-3">
+                <div class="card">
+                    <div class="card-header py-2">
+                        <strong class="small"><i class="fas fa-shapes me-1"></i>Annotations</strong>
+                    </div>
+                    <ul id="shapes-list" class="list-group list-group-flush" style="max-height:200px;overflow-y:auto;"></ul>
+                </div>
+            </div>
+
         </div>
 
     </div>
@@ -53,28 +111,68 @@
     <i class="fas fa-check me-1"></i>Saved!
 </div>
 
+<script src="https://unpkg.com/konva@9/konva.min.js"></script>
+<script src="{% static 'js/dermatology/dermatology_annotator.js' %}"></script>
+
 <script>
 (function () {
     var patientId = {{ patient.patient_id }};
-    var loading = document.getElementById('clinicalPhotoLoading');
-    var content = document.getElementById('clinicalPhotoContent');
-    var img = document.getElementById('clinicalPhotoImage');
-    var errorEl = document.getElementById('clinicalPhotoError');
+    var wrap = document.getElementById('photo-player-wrap');
+    var placeholder = document.getElementById('photo-placeholder');
+    var toggleBtn = document.getElementById('annotation-toggle-btn');
 
     fetch('/dermatology/api/patient/' + patientId + '/clinical-photo/')
         .then(function (response) { return response.json(); })
         .then(function (data) {
-            loading.style.display = 'none';
             if (data.error || !data.images || data.images.length === 0) {
-                errorEl.style.display = 'block';
+                if (placeholder) placeholder.innerHTML = '<i class="fas fa-camera me-2"></i>No clinical photo uploaded for this patient yet.';
                 return;
             }
-            img.src = data.images[0].url;
-            content.style.display = 'block';
+
+            var imageData = data.images[0];
+            placeholder.remove();
+
+            var imgWrap = document.createElement('div');
+            imgWrap.id = 'annotator-img-wrap';
+            imgWrap.style.cssText = 'position:relative;max-width:100%;';
+            wrap.appendChild(imgWrap);
+
+            var img = new Image();
+            img.crossOrigin = 'anonymous';
+            img.style.cssText = 'max-width:100%;display:block;';
+            img.src = imageData.url;
+
+            img.onload = function () {
+                var canModify = {{ can_modify|yesno:"true,false" }};
+                if (canModify) {
+                    toggleBtn.classList.remove('d-none');
+                }
+
+                var annotator = new DermatologyAnnotator({
+                    imageEl: img,
+                    wrapEl: imgWrap,
+                    outerEl: wrap,
+                    toolbarEl: document.getElementById('annotation-toolbar'),
+                    toggleBtn: toggleBtn,
+                    regionListEl: document.getElementById('region-list'),
+                    shapesListEl: document.getElementById('shapes-list'),
+                    brushSizeInput: document.getElementById('brush-size-input'),
+                    brushSizeLabel: document.getElementById('brush-size-label'),
+                    polygonHintEl: document.getElementById('polygon-drawing-hint'),
+                    quadrantSelectEl: document.getElementById('quadrant-select'),
+                    addRegionBtnEl: document.getElementById('add-region-btn'),
+                    addQuadrantBtnEl: document.getElementById('add-quadrant-btn'),
+                    deleteQuadrantBtnEl: document.getElementById('delete-quadrant-btn'),
+                    patientId: patientId,
+                    fileRegistryId: imageData.id,
+                    isAdmin: {{ is_admin_user|yesno:"true,false" }},
+                    csrfToken: '{{ csrf_token }}',
+                    apiBase: '/dermatology',
+                });
+            };
         })
         .catch(function () {
-            loading.style.display = 'none';
-            errorEl.style.display = 'block';
+            if (placeholder) placeholder.innerHTML = '<i class="fas fa-exclamation-triangle me-2"></i>Error loading photo.';
         });
 })();
 </script>

@@ -721,3 +721,138 @@ def ios_landmarks_state_api(request, patient_id):
             "updatedAt": updated_at.isoformat() if updated_at else None,
         }
     )
+
+
+from annotations.services.region_annotation import (
+    save_dermatology_annotations,
+)
+
+
+def _dermatology_annotation_state(patient):
+    """The shapes and quadrant marker to draw, keyed like the save body.
+
+    Rebuilt from the canonical items for the patient's single photograph.
+    """
+    from annotations.models import AnnotationSet, Geometry2DItem, EventAnnotationItem
+    from annotations.services.region_annotation import REGION_KIND
+
+    annotation_set = (
+        AnnotationSet.objects.filter(
+            dermatology_patient=patient, kind=REGION_KIND
+        )
+        .order_by("id")
+        .first()
+    )
+    empty = {"revision": 0, "setId": None, "shapes": [], "quadrantName": None, "updatedAt": None}
+    if annotation_set is None:
+        return empty
+
+    revision = annotation_set.revisions.order_by("-revision_number").first()
+    if revision is None:
+        return {**empty, "setId": annotation_set.id, "updatedAt": annotation_set.updated_at}
+
+    shapes = []
+    for item in Geometry2DItem.objects.filter(revision=revision).select_related("label").order_by("order", "id"):
+        attrs = item.attributes if isinstance(item.attributes, dict) else {}
+        shapes.append({
+            "tool": attrs.get("tool", "brush"),
+            "points": [coord for point in item.points for coord in point],
+            "strokeWidth": item.stroke_width,
+            "regionName": attrs.get("region_name") or None,
+        })
+
+    quadrant_name = None
+    event = EventAnnotationItem.objects.filter(revision=revision, event_type="quadrant").order_by("-id").first()
+    if event is not None:
+        quadrant_name = event.value or None
+
+    return {
+        "revision": revision.revision_number,
+        "setId": annotation_set.id,
+        "shapes": shapes,
+        "quadrantName": quadrant_name,
+        "updatedAt": annotation_set.updated_at,
+    }
+
+
+@login_required
+@require_POST
+def save_dermatology_annotations_api(request, patient_id):
+    """Replace this patient's region annotations with what is on screen.
+
+    Body::
+
+        {"expectedRevision": 4, "fileId": 12,
+         "shapes": [{"tool": "brush", "points": [x1, y1, ...],
+                     "strokeWidth": 8, "regionName": "Suspicious area"}],
+         "quadrantName": "Left arm"}
+    """
+    from dermatology.models import Patient
+
+    patient = get_object_or_404(Patient, patient_id=patient_id)
+
+    can_write = bool(
+        patient.folder and user_can_write_annotations(request.user, patient.folder, request)
+    ) or user_is_project_admin(request.user, request) or patient.uploaded_by_id == request.user.id
+    if not can_write:
+        return JsonResponse({"error": "Permission denied"}, status=403)
+
+    try:
+        body = json.loads(request.body or b"{}")
+    except json.JSONDecodeError:
+        return JsonResponse({"error": "Malformed JSON body"}, status=400)
+    if not isinstance(body, dict):
+        return JsonResponse({"error": "Body must be a JSON object"}, status=400)
+
+    expected_revision = body.get("expectedRevision")
+    if expected_revision is not None and (
+        not isinstance(expected_revision, int) or isinstance(expected_revision, bool)
+    ):
+        return JsonResponse({"error": "expectedRevision must be an integer or null"}, status=400)
+
+    try:
+        file_obj = _checked_file(body.get("fileId"), patient, "body")
+    except _BadRequest as exc:
+        return JsonResponse({"error": str(exc)}, status=exc.status)
+
+    shapes = body.get("shapes")
+    if not isinstance(shapes, list):
+        return JsonResponse({"error": "shapes must be a list"}, status=400)
+
+    try:
+        revision = save_dermatology_annotations(
+            patient,
+            file_obj=file_obj,
+            shapes=shapes,
+            quadrant_name=body.get("quadrantName"),
+            author=request.user,
+            expected_revision=expected_revision,
+        )
+    except AnnotationConflict as exc:
+        return JsonResponse({"error": str(exc), "conflict": True}, status=409)
+    except AnnotationNotAllowed as exc:
+        return JsonResponse({"error": str(exc)}, status=403)
+    except ValidationError as exc:
+        return JsonResponse({"error": _first_message(exc)}, status=400)
+
+    return JsonResponse({
+        "revision": revision.revision_number,
+        "setId": revision.annotation_set_id,
+        "shapes": len(shapes),
+    })
+
+
+@login_required
+def dermatology_annotations_state_api(request, patient_id):
+    """The shapes to draw, and the revision a save must quote."""
+    from dermatology.models import Patient
+
+    patient = get_object_or_404(Patient, patient_id=patient_id)
+    if not (
+        (patient.folder and user_can_read_folder(request.user, patient.folder, request))
+        or user_is_project_admin(request.user, request)
+        or patient.uploaded_by_id == request.user.id
+    ):
+        return JsonResponse({"error": "Permission denied"}, status=403)
+
+    return JsonResponse(_dermatology_annotation_state(patient))
