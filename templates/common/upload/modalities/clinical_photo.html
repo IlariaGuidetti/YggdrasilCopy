@@ -1,0 +1,11 @@
+<div class="mb-4">
+	<h6 class="mb-2"><i class="fas fa-camera me-2"></i>Clinical Photo</h6>
+	<div class="mb-3">
+		<label for="{{ patient_upload_form.photo.id_for_label }}" class="form-label">{{ patient_upload_form.photo.label }}</label>
+		{{ patient_upload_form.photo }}
+		{% if patient_upload_form.photo.errors %}
+			<div class="text-danger">{{ patient_upload_form.photo.errors }}</div>
+		{% endif %}
+		<div class="form-text">Upload clinical photo of the skin lesion (JPG, PNG, BMP formats)</div>
+	</div>
+</div>

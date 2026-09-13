@@ -17,6 +17,8 @@ def get_domain_models(request):
     ns = get_namespace(request)
     if ns == 'laparoscopy':
         app_label = 'laparoscopy'
+    elif ns == 'dermatology':
+        app_label = 'dermatology'
     else:
         app_label = 'maxillo'
 
@@ -47,6 +49,13 @@ def get_domain_forms(request):
     ns = get_namespace(request)
     if ns == 'laparoscopy':
         from laparoscopy.forms import (
+            ClassificationForm,
+            PatientForm,
+            PatientManagementForm,
+            PatientUploadForm,
+        )
+    elif ns == 'dermatology':
+        from dermatology.forms import (
             ClassificationForm,
             PatientForm,
             PatientManagementForm,

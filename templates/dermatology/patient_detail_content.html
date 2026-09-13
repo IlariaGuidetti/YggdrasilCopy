@@ -1,0 +1,80 @@
+{% load static %}
+
+<div class="container-fluid dermatology-patient-detail">
+    <div class="row">
+
+        <div class="col-lg-8">
+
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h4 class="mb-0">
+                    <i class="fas fa-user-md me-2"></i>
+                    {% if patient.name %}{{ patient.name }}{% else %}Patient {{ patient.patient_id }}{% endif %}
+                </h4>
+            </div>
+
+            <div id="clinicalPhotoLoading">
+                <div class="text-center py-4">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-2 text-muted">Loading clinical photo...</p>
+                </div>
+            </div>
+            <div id="clinicalPhotoContent" class="mb-3" style="display:none;background:#111;line-height:0;overflow:hidden;text-align:center;border-radius:6px;">
+                <img id="clinicalPhotoImage" style="max-width:100%;max-height:65vh;display:inline-block;cursor:pointer;" alt="Clinical photo">
+            </div>
+            <div id="clinicalPhotoError" style="display:none;">
+                <p class="text-muted p-4 mb-0 text-center">
+                    <i class="fas fa-camera me-2"></i>No clinical photo uploaded for this patient yet.
+                </p>
+            </div>
+
+        </div>
+
+        <div class="col-lg-4">
+            {% include 'common/sections/vocal_caption_section.html' %}
+            {% include 'common/sections/scan_settings_section.html' %}
+            {% include 'common/sections/file_management_section.html' %}
+        </div>
+
+    </div>
+
+    <div class="row mt-3">
+        <div class="col-12">
+            {% firstof request.resolver_match.namespace 'maxillo' as ns %}
+            <a href="{% url ns|add:':patient_list' %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left me-2"></i>Back to Patient List
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="saving-indicator" id="savingIndicator">
+    <i class="fas fa-check me-1"></i>Saved!
+</div>
+
+<script>
+(function () {
+    var patientId = {{ patient.patient_id }};
+    var loading = document.getElementById('clinicalPhotoLoading');
+    var content = document.getElementById('clinicalPhotoContent');
+    var img = document.getElementById('clinicalPhotoImage');
+    var errorEl = document.getElementById('clinicalPhotoError');
+
+    fetch('/dermatology/api/patient/' + patientId + '/clinical-photo/')
+        .then(function (response) { return response.json(); })
+        .then(function (data) {
+            loading.style.display = 'none';
+            if (data.error || !data.images || data.images.length === 0) {
+                errorEl.style.display = 'block';
+                return;
+            }
+            img.src = data.images[0].url;
+            content.style.display = 'block';
+        })
+        .catch(function () {
+            loading.style.display = 'none';
+            errorEl.style.display = 'block';
+        });
+})();
+</script>

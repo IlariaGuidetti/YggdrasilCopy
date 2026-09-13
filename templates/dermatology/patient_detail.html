@@ -1,0 +1,14 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Patient {{ patient.name }} - Yggdrasil{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/patient_detail.css' %}">
+<link rel="stylesheet" href="{% static 'css/image_viewer.css' %}">
+{% endblock %}
+{% block content %}
+{% include 'dermatology/patient_detail_content.html' %}
+{% endblock %}
+{% block extra_js %}
+<script src="{% static 'js/vocal_caption.js' %}"></script>
+<script src="{% static 'js/collapse_sections.js' %}"></script>
+{% endblock %}

@@ -167,3 +167,4 @@ Thumbs.db
 /iop-compass/
 # Weight files uploaded to algo/iop-compass/weights/ on the cluster.
 /IOP_weights/
+desktop.ini 

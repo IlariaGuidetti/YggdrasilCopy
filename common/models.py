@@ -421,7 +421,9 @@ class Job(DomainFKAccessorMixin, models.Model):
 	voice_caption = models.ForeignKey('maxillo.VoiceCaption', on_delete=models.CASCADE, related_name='jobs', null=True, blank=True)
 	brain_voice_caption = models.ForeignKey('brain.VoiceCaption', on_delete=models.CASCADE, related_name='jobs', null=True, blank=True)
 	laparoscopy_voice_caption = models.ForeignKey('laparoscopy.VoiceCaption', on_delete=models.CASCADE, related_name='jobs', null=True, blank=True)
-
+	dermatology_patient = models.ForeignKey('dermatology.Patient', on_delete=models.CASCADE, related_name='jobs', null=True, blank=True)
+	dermatology_voice_caption = models.ForeignKey('dermatology.VoiceCaption', on_delete=models.CASCADE, related_name='jobs', null=True, blank=True)
+	
 	# IO
 	input_files = models.JSONField(default=dict, blank=True, help_text='Dict of input object keys used by workers')
 	output_files = models.JSONField(default=dict, blank=True, help_text='Dict of output object keys and metadata written on completion')
@@ -585,6 +587,8 @@ class ProcessingJob(DomainFKAccessorMixin, models.Model):
 	voice_caption = models.ForeignKey('maxillo.VoiceCaption', on_delete=models.CASCADE, related_name='processing_jobs', null=True, blank=True)
 	brain_voice_caption = models.ForeignKey('brain.VoiceCaption', on_delete=models.CASCADE, related_name='processing_jobs', null=True, blank=True)
 	laparoscopy_voice_caption = models.ForeignKey('laparoscopy.VoiceCaption', on_delete=models.CASCADE, related_name='processing_jobs', null=True, blank=True)
+	dermatology_patient = models.ForeignKey('dermatology.Patient', on_delete=models.CASCADE, related_name='processing_jobs', null=True, blank=True)
+	dermatology_voice_caption = models.ForeignKey('dermatology.VoiceCaption', on_delete=models.CASCADE, related_name='processing_jobs', null=True, blank=True)
 
 	# File paths
 	input_files = models.JSONField(default=dict, blank=True, help_text='Dict of input object keys used by workers')
@@ -751,6 +755,8 @@ class FileRegistry(DomainFKAccessorMixin, models.Model):
 		# is a file artifact in object storage. Addressed by an AnnotationPayload, never
 		# read back as the annotation record itself.
 		('annotation_mask', 'Annotation Mask'),
+		# Dermatology modalities
+		('clinical_photo', 'Clinical Photo'),
 	]
 
 	file_type = models.CharField(max_length=255, choices=FILE_TYPE_CHOICES)
@@ -767,6 +773,8 @@ class FileRegistry(DomainFKAccessorMixin, models.Model):
 	voice_caption = models.ForeignKey('maxillo.VoiceCaption', on_delete=models.CASCADE, related_name='files', null=True, blank=True)
 	brain_voice_caption = models.ForeignKey('brain.VoiceCaption', on_delete=models.CASCADE, related_name='files', null=True, blank=True)
 	laparoscopy_voice_caption = models.ForeignKey('laparoscopy.VoiceCaption', on_delete=models.CASCADE, related_name='files', null=True, blank=True)
+	dermatology_patient = models.ForeignKey('dermatology.Patient', on_delete=models.CASCADE, related_name='files', null=True, blank=True)
+	dermatology_voice_caption = models.ForeignKey('dermatology.VoiceCaption', on_delete=models.CASCADE, related_name='files', null=True, blank=True)
 	processing_job = models.ForeignKey('common.Job', on_delete=models.CASCADE, related_name='files', null=True, blank=True)
 	created_at = models.DateTimeField(auto_now_add=True)
 	metadata = models.JSONField(default=dict, blank=True, help_text='Additional file metadata')

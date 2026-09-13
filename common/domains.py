@@ -13,6 +13,7 @@ DOMAIN_CHOICES = [
     ("maxillo", "Maxillo"),
     ("brain", "Brain"),
     ("laparoscopy", "Laparoscopy"),
+    ("dermatology", "Dermatology"),
 ]
 
 DEFAULT_DOMAIN = DOMAIN_CHOICES[0][0]
@@ -26,6 +27,7 @@ DOMAIN_FK_FIELDS = {
     "maxillo": ("patient", "voice_caption"),
     "brain": ("brain_patient", "brain_voice_caption"),
     "laparoscopy": ("laparoscopy_patient", "laparoscopy_voice_caption"),
+    "dermatology": ("dermatology_patient", "dermatology_voice_caption"),
 }
 
 
@@ -58,6 +60,7 @@ _DOMAIN_BLURBS = {
     "maxillo": "Dental & maxillofacial imaging — bite classification, IOS, CBCT and panoramic extraction.",
     "brain": "Brain tumor MRI — multi-sequence review with AI-assisted captioning.",
     "laparoscopy": "Surgical video annotation — frame-accurate segmentation and tagging.",
+    "dermatology": "Clinical photography of skin lesions — region annotation and body-site classification.",
 }
 
 # Default glyph per domain when Project.icon is blank.
@@ -65,6 +68,7 @@ _DOMAIN_ICONS = {
     "maxillo": "fas fa-tooth",
     "brain": "fas fa-brain",
     "laparoscopy": "fas fa-video",
+    "dermatology": "fas fa-user-md",
 }
 
 

@@ -290,10 +290,18 @@ _LAPAROSCOPY_ARTIFACTS = [
     ),
 ]
 
+_DERMATOLOGY_ARTIFACTS = [
+    Artifact(
+        "clinical_photo.raw", "clinical_photo", "Uploaded clinical photo", BUCKET_RAW,
+        file_types=["clinical_photo"],
+    ),
+]
+
 ARTIFACTS_BY_DOMAIN = {
     "maxillo": _MAXILLO_ARTIFACTS + _SHARED_ARTIFACTS,
     "brain": _mri_artifacts() + _SHARED_ARTIFACTS,
     "laparoscopy": _LAPAROSCOPY_ARTIFACTS + _SHARED_ARTIFACTS,
+    "dermatology": _DERMATOLOGY_ARTIFACTS + _SHARED_ARTIFACTS,
 }
 
 
