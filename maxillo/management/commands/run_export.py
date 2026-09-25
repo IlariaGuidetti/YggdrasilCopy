@@ -18,10 +18,11 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument('export_id', type=int)
-        parser.add_argument('--domain', choices=['maxillo', 'laparoscopy', 'brain'])
+        parser.add_argument('--domain', choices=['maxillo', 'laparoscopy', 'brain', 'dermatology'])
 
     def handle(self, *args, **options):
         from brain.models import Export as BrainExport
+        from dermatology.models import Export as DermatologyExport
 
         export_id = options['export_id']
         domain = options.get('domain')
@@ -31,6 +32,8 @@ class Command(BaseCommand):
             export = LaparoscopyExport.objects.filter(id=export_id).first()
         elif domain == 'brain':
             export = BrainExport.objects.filter(id=export_id).first()
+        elif domain == 'dermatology':
+            export = DermatologyExport.objects.filter(id=export_id).first()
         elif domain == 'maxillo':
             export = MaxilloExport.objects.filter(id=export_id).first()
         else:
@@ -46,6 +49,10 @@ class Command(BaseCommand):
                     export = BrainExport.objects.filter(id=export_id).first()
                     if export:
                         domain = 'brain'
+                    else:
+                        export = DermatologyExport.objects.filter(id=export_id).first()
+                        if export:
+                            domain = 'dermatology'
 
         if not export:
             raise CommandError(f'Export {export_id} not found')

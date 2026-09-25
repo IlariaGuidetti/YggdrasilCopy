@@ -729,50 +729,8 @@ from annotations.services.region_annotation import (
 
 
 def _dermatology_annotation_state(patient):
-    """The shapes and quadrant marker to draw, keyed like the save body.
-
-    Rebuilt from the canonical items for the patient's single photograph.
-    """
-    from annotations.models import AnnotationSet, Geometry2DItem, EventAnnotationItem
-    from annotations.services.region_annotation import REGION_KIND
-
-    annotation_set = (
-        AnnotationSet.objects.filter(
-            dermatology_patient=patient, kind=REGION_KIND
-        )
-        .order_by("id")
-        .first()
-    )
-    empty = {"revision": 0, "setId": None, "shapes": [], "quadrantName": None, "updatedAt": None}
-    if annotation_set is None:
-        return empty
-
-    revision = annotation_set.revisions.order_by("-revision_number").first()
-    if revision is None:
-        return {**empty, "setId": annotation_set.id, "updatedAt": annotation_set.updated_at}
-
-    shapes = []
-    for item in Geometry2DItem.objects.filter(revision=revision).select_related("label").order_by("order", "id"):
-        attrs = item.attributes if isinstance(item.attributes, dict) else {}
-        shapes.append({
-            "tool": attrs.get("tool", "brush"),
-            "points": [coord for point in item.points for coord in point],
-            "strokeWidth": item.stroke_width,
-            "regionName": attrs.get("region_name") or None,
-        })
-
-    quadrant_name = None
-    event = EventAnnotationItem.objects.filter(revision=revision, event_type="quadrant").order_by("-id").first()
-    if event is not None:
-        quadrant_name = event.value or None
-
-    return {
-        "revision": revision.revision_number,
-        "setId": annotation_set.id,
-        "shapes": shapes,
-        "quadrantName": quadrant_name,
-        "updatedAt": annotation_set.updated_at,
-    }
+    from annotations.services.region_annotation import dermatology_annotation_state
+    return dermatology_annotation_state(patient)
 
 
 @login_required

@@ -101,3 +101,45 @@ def save_dermatology_annotations(
         reclaim_primary=False,
         primary_index=0,
     )
+def dermatology_annotation_state(patient):
+    """The shapes and quadrant marker recorded for this patient's photograph.
+
+    Returns ``{"revision": int, "setId": int|None, "shapes": [...], "quadrantName": str|None, "updatedAt": datetime|None}``.
+    """
+    from annotations.models import AnnotationSet, EventAnnotationItem, Geometry2DItem
+
+    annotation_set = (
+        AnnotationSet.objects.filter(dermatology_patient=patient, kind=REGION_KIND)
+        .order_by("id")
+        .first()
+    )
+    empty = {"revision": 0, "setId": None, "shapes": [], "quadrantName": None, "updatedAt": None}
+    if annotation_set is None:
+        return empty
+
+    revision = annotation_set.revisions.order_by("-revision_number").first()
+    if revision is None:
+        return {**empty, "setId": annotation_set.id, "updatedAt": annotation_set.updated_at}
+
+    shapes = []
+    for item in Geometry2DItem.objects.filter(revision=revision).order_by("order", "id"):
+        attrs = item.attributes if isinstance(item.attributes, dict) else {}
+        shapes.append({
+            "tool": attrs.get("tool", "brush"),
+            "points": [coord for point in item.points for coord in point],
+            "strokeWidth": item.stroke_width,
+            "regionName": attrs.get("region_name") or None,
+        })
+
+    quadrant_name = None
+    event = EventAnnotationItem.objects.filter(revision=revision, event_type="quadrant").order_by("-id").first()
+    if event is not None:
+        quadrant_name = event.value or None
+
+    return {
+        "revision": revision.revision_number,
+        "setId": annotation_set.id,
+        "shapes": shapes,
+        "quadrantName": quadrant_name,
+        "updatedAt": annotation_set.updated_at,
+    }

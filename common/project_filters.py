@@ -50,6 +50,13 @@ PRESENCE_FILTERS = [
         "label": "Tooth segmentation",
         "icon": "fas fa-draw-polygon",
     },
+    {
+        "key": "presence_dermatology",
+        "param": "has_confocal_region_annotations",
+        "method": "dermatology_region_annotation",
+        "label": "Confocal annotations",
+        "icon": "fas fa-microscope",
+    }
 ]
 
 

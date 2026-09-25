@@ -76,7 +76,6 @@ def quadrant_marker(*, quadrant_name=None):
         descriptors.event(
             event_type="quadrant",
             value=quadrant_name or "",
-            label_code=quadrant_name,
             attributes={"quadrant": quadrant_name} if quadrant_name else {},
         )
     ]

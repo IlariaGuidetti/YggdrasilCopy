@@ -73,7 +73,10 @@ class ExportProcessor:
         # Which of FileRegistry's parallel patient FK columns this domain uses.
         # The modality -> file_type mapping that used to live here (and in two
         # other copies) is now common.export_catalog.
-        self.patient_fk = "brain_patient" if domain == "brain" else "patient"
+        self.patient_fk = {
+            "brain": "brain_patient",
+            "dermatology": "dermatology_patient",
+        }.get(domain, "patient")
         self.query_params = export.query_params
         self.folder_ids = self.query_params.get("folder_ids", [])
         self.project_id = self.query_params.get("project_id")
@@ -172,6 +175,8 @@ class ExportProcessor:
         """Return (Patient, VoiceCaption) model classes for the active domain."""
         if self.domain == "brain":
             from brain.models import Patient, VoiceCaption
+        elif self.domain == "dermatology":
+            from dermatology.models import Patient, VoiceCaption
         else:
             from maxillo.models import Patient, VoiceCaption
         return Patient, VoiceCaption
@@ -371,6 +376,7 @@ class ExportProcessor:
             "occlusion": self._collect_occlusion,
             "tooth_segmentation": self._collect_tooth_segmentation,
             "ios_landmarks": self._collect_ios_landmarks,
+            "dermatology_region_annotations": self._collect_dermatology_annotations,
         }.get(artifact.collector)
         if producer is None:
             logger.warning("No collector registered for artifact %s", artifact.key)
@@ -512,6 +518,35 @@ class ExportProcessor:
                 len(content.encode("utf-8")),
             )
 
+    def _collect_dermatology_annotations(self, patient, artifact):
+        """One JSON document with the region annotations on this patient's photograph."""
+        if self.domain != "dermatology":
+            return
+        from annotations.services.region_annotation import dermatology_annotation_state
+
+        state = dermatology_annotation_state(patient)
+        if not state["shapes"] and not state["quadrantName"]:
+            return
+
+        blob = {
+            "patient_id": patient.patient_id,
+            "revision": state["revision"],
+            "quadrant_name": state["quadrantName"],
+            "updated_at": state["updatedAt"].isoformat() if state["updatedAt"] else None,
+            "shapes": state["shapes"],
+        }
+        content = json.dumps(blob, indent=2)
+        yield (
+            {
+                "type": "document",
+                "patient": patient,
+                "artifact": artifact,
+                "content": content,
+                "filename": f"patient_{patient.patient_id}_annotations.json",
+            },
+            len(content.encode("utf-8")),
+        )
+        
     @staticmethod
     def _patient_folder(patient):
         """`patient_<id>_<name>` with anything path-unsafe stripped."""
@@ -703,6 +738,7 @@ def start_export_processing(export_id, domain="maxillo"):
     """
 
     from brain.models import Export as BrainExport
+    from dermatology.models import Export as DermatologyExport
     from laparoscopy.models import Export as LaparoscopyExport
     from maxillo.models import Export as MaxilloExport
     try:
@@ -710,6 +746,8 @@ def start_export_processing(export_id, domain="maxillo"):
             export = LaparoscopyExport.objects.filter(id=export_id).first()
         elif domain == "brain":
             export = BrainExport.objects.filter(id=export_id).first()
+        elif domain == "dermatology":
+            export = DermatologyExport.objects.filter(id=export_id).first()
         else:
             export = MaxilloExport.objects.filter(id=export_id).first()
         if not export:
@@ -746,6 +784,7 @@ def start_export_processing(export_id, domain="maxillo"):
                 MaxilloExport.objects.filter(id=export_id).first()
                 or LaparoscopyExport.objects.filter(id=export_id).first()
                 or BrainExport.objects.filter(id=export_id).first()
+                or DermatologyExport.objects.filter(id=export_id).first()
             )
             if export:
                 export.mark_failed(str(e))

@@ -18,6 +18,8 @@ from common.permissions import (
     filter_folders_for_user,
     filter_patients_for_user,
     user_is_project_admin,
+    user_can_write_annotations,
+    user_can_delete_single_patient,
 )
 from maxillo.views.helpers import render_with_fallback
 from maxillo.views.patient_data import _serve_file_url
@@ -322,7 +324,7 @@ def patient_detail(request, patient_id):
         return redirect("dermatology:patient_list")
 
     management_form = PatientManagementForm(instance=patient, user=request.user)
-    can_modify = is_admin_user or is_owner
+    can_modify = is_admin_user or bool(patient.folder and user_can_write_annotations(request.user, patient.folder, request))
 
     if request.method == "POST" and can_modify:
         action = request.POST.get("action")
@@ -356,7 +358,8 @@ def patient_detail(request, patient_id):
 @require_POST
 def update_patient_name(request, patient_id):
     patient = get_object_or_404(Patient, patient_id=patient_id)
-    if not (user_is_project_admin(request.user, "dermatology") or patient.uploaded_by_id == request.user.id):
+    can_modify = user_is_project_admin(request.user, "dermatology") or bool(patient.folder and user_can_write_annotations(request.user, patient.folder, request))
+    if not can_modify:
         return JsonResponse({"error": "Permission denied"}, status=403)
     try:
         data = _json.loads(request.body)
@@ -374,7 +377,7 @@ def update_patient_name(request, patient_id):
 @require_POST
 def delete_patient(request, patient_id):
     patient = get_object_or_404(Patient, patient_id=patient_id)
-    can_delete = user_is_project_admin(request.user, "dermatology") or patient.uploaded_by_id == request.user.id
+    can_delete = user_is_project_admin(request.user, "dermatology") or bool(patient.folder and user_can_delete_single_patient(request.user, patient.folder, request))
     if not can_delete:
         return JsonResponse(
             {"success": False, "error": "You do not have permission to delete this patient."},
@@ -604,6 +607,9 @@ def upload_voice_caption(request, patient_id):
 @require_POST
 def upload_text_caption(request, patient_id):
     patient = get_object_or_404(Patient, patient_id=patient_id)
+    can_modify = user_is_project_admin(request.user, "dermatology") or bool(patient.folder and user_can_write_annotations(request.user, patient.folder, request))
+    if not can_modify:
+        return JsonResponse({"error": "Permission denied"}, status=403)
     try:
         data = _json.loads(request.body) if request.body else request.POST
     except _json.JSONDecodeError:
@@ -794,7 +800,7 @@ def _annotation_patient_permissions(request, patient):
     is_admin_user = user_is_project_admin(request.user, "dermatology")
     is_owner = patient.uploaded_by_id == request.user.id
     can_view = is_admin_user or is_owner or patient.visibility == "public" or patient.folder is not None
-    can_modify = is_admin_user or is_owner
+    can_modify = is_admin_user or bool(patient.folder and user_can_write_annotations(request.user, patient.folder, request))
     return can_view, can_modify
 
 

@@ -295,6 +295,11 @@ _DERMATOLOGY_ARTIFACTS = [
         "clinical_photo.raw", "clinical_photo", "Uploaded clinical photo", BUCKET_RAW,
         file_types=["clinical_photo"],
     ),
+    Artifact(
+        "dermatology-photo.annotations", "clinical_photo", "Region annotations", BUCKET_DERIVED,
+        collector="dermatology_region_annotations",
+        zip_dir="clinical_photo/annotations",
+    ),
 ]
 
 ARTIFACTS_BY_DOMAIN = {
